@@ -1,0 +1,25 @@
+import { createRouter, createWebHistory } from 'vue-router';
+
+import Home from '@/components/Home.vue';
+import Brands from '@/components/Brands.vue';
+import Fragrances from "@/components/Fragrances.vue";
+const routes  = [
+    {
+    path: '/',
+    component: Home,
+    },
+    {
+    path: '/brands',
+    component: Brands,
+    },
+    {
+    path: '/fragrances',
+    component: Fragrances,
+    },
+];
+
+const router  = createRouter( {
+    history: createWebHistory(),
+    routes,
+});
+export default router;
