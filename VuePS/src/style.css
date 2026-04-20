@@ -1,5 +1,6 @@
 body {
   font-family: Arial, serif;
+  margin: 15px;
 }
 
 @tailwind base;
