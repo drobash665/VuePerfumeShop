@@ -12,8 +12,34 @@
     :laading="true"
     :first="offset"
   >
+    <template #header>
+      <InputText
+        v-model="search"
+        type="text" id="search"
+        required
+        placeholder="Наименование"
+        class="m-2 sm:w-auto"/>
+      <Button type="button"
+              @click="onPushSearchButton()"
+              icon="pi pi-search"
+              label="Найти"/>
+    </template>
+    <Column class="w-24 !text-end" header="Действия">
+      <template #body="{ data }">
+        <div class="flex justify-between gap-2">
+          <Button icon="pi pi-times-circle" @click="openPopupConfirm($event, data)"
+                  severity="secondary" rounded></Button>
+          <Button icon="pi pi-file-edit" @click="selectRow(data)" severity="secondary"
+                  rounded></Button>
+        </div>
+      </template>
+    </Column>
     <Column field="id" header="№"/>
-    <Column field="brand_id" header="Бренд"/>
+    <Column header="Бренд">
+      <template #body="{ data }">
+        {{ getBrandName(data.brand_id) }}
+      </template>
+    </Column>
     <Column field="name" header="Название аромата"/>
     <Column field="gender" header="Пол"/>
     <Column field="year" header="Год выпуска"/>
@@ -38,6 +64,8 @@
       </div>
     </template>
   </DataTable>
+  <ConfirmPopup></ConfirmPopup>
+  <Toast></Toast>
 </template>
 
 <script>
@@ -45,15 +73,19 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import {useDataStore} from "@/stores/dataStore";
 import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import ConfirmPopup from "primevue/confirmpopup";
+import Toast from "primevue/toast";
 
 export default {
   name: "Fragrances",
-  components: {DataTable, Column, Button},
+  components: {DataTable, Column, Button, InputText, Toast, ConfirmPopup},
   data() {
     return {
       dataStore: useDataStore(),
       perpage: 5,
       offset: 0,
+      search: "",
     }
   },
   computed: {
@@ -62,12 +94,22 @@ export default {
     },
     fragrances_total() {
       return this.dataStore.fragrances_total;
-    }
+    },
+    error_code() {
+      return this.dataStore.errorCode;
+    },
+    error_message() {
+      return this.dataStore.errorMessage;
+    },
+    brands() {
+      return this.dataStore.brands;
+    },
   },
   mounted() {
     console.log('fragrances component MOUNTED!');
     this.dataStore.get_fragrances();
     this.dataStore.get_fragrances_total();
+    this.dataStore.get_brands();
     console.log('Fragrances=', this.fragrances);
   },
   methods: {
@@ -75,8 +117,44 @@ export default {
       this.offset = event.first;
       this.perpage = event.rows;
       this.dataStore.get_fragrances(this.offset / this.perpage, this.perpage);
+    },
+    onPushSearchButton() {
+      this.dataStore.get_fragrances_total(this.search);
+      this.dataStore.get_fragrances(undefined, undefined, this.search);
+    },
+    openPopupConfirm(event, data) {
+      this.$confirm.require({
+        message: 'Вы уверены, что хотите удалить запись ' + data.id + '?',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Да',
+        rejectLabel: 'Нет',
+        accept: () => {
+          this.deleteFragrance(data.id);
+        },
+      })
+    },
+    selectRow(data){
+      this.$router.push('/createFragrance/' + data.id);
+    },
+    async deleteFragrance(id) {
+      await this.dataStore.delete_fragrance(id);
+      if (this.error_code > 0)
+        this.$toast.add({
+          severity: 'error', summary: "Ошибка удаления аромата " +
+            id, detail: this.error_message + " " + this.error_code, life: 4000
+        });
+      else
+        this.$toast.add({
+          severity: 'success', summary: 'Аромат ' + id +
+            " успешно удален", detail: this.error_message, life: 4000
+        });
+      this.dataStore.get_fragrances(this.offset / this.perpage, this.perpage, this.search);
+    },
+    getBrandName(brandId) {
+      const brand = this.brands.find(brand => brand.id == brandId);
+      return brand ? brand.name : 'Неизвестный бренд';
     }
-  }
+  },
 }
 </script>
 
